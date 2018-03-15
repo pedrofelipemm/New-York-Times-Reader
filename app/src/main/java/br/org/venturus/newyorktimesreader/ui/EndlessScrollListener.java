@@ -18,10 +18,12 @@ public abstract class EndlessScrollListener extends OnScrollListener implements 
     @Override
     public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
         super.onScrolled(recyclerView, dx, dy);
-        if (canLoadMoreItems()) {
+        if (canLoadMoreItems() && !isLoading()) {
             onScrolledToEnd(layoutManager.findFirstVisibleItemPosition());
         }
     }
+
+    protected abstract boolean isLoading();
 
     @Override
     public void onScrollStateChanged(AbsListView view, int scrollState) {}

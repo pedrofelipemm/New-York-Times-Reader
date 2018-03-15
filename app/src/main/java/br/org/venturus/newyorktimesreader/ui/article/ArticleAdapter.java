@@ -28,7 +28,7 @@ class ArticleAdapter extends RecyclerView.Adapter<ArticleAdapter.ViewHolder> {
     private Context context;
     private LayoutInflater inflater;
 
-    private ArticlesTo articles;
+    private ArticlesTo articles = new ArticlesTo();
 
     private ArticleClickListener itemClickListener;
 
@@ -96,6 +96,7 @@ class ArticleAdapter extends RecyclerView.Adapter<ArticleAdapter.ViewHolder> {
 
     @Override
     public int getItemCount() {
+        if (articles == null) return 0;
         return articles.size();
     }
 

@@ -22,6 +22,7 @@ import br.org.venturus.newyorktimesreader.entity.to.ArticlesTo;
 import br.org.venturus.newyorktimesreader.infra.OperationListener;
 import br.org.venturus.newyorktimesreader.infra.factory.ManagerFactory;
 import br.org.venturus.newyorktimesreader.infra.network.ApiError;
+import br.org.venturus.newyorktimesreader.infra.utils.StringUtils;
 import br.org.venturus.newyorktimesreader.manager.ArticleManager;
 import br.org.venturus.newyorktimesreader.ui.EndlessScrollListener;
 import br.org.venturus.newyorktimesreader.ui.OnDisplayFeedback;
@@ -53,9 +54,10 @@ public class ArticleActivity extends AppCompatActivity {
 
     private LinearLayoutManager linearLayoutManager;
 
-    int numberOfItemsToLoad ;
     private int recyclerViewPage;
     private int searchPage;
+    private int numberOfItemsToLoad;
+    private boolean isLoading;
 
     private ArticleManager articleManager;
 
@@ -77,7 +79,7 @@ public class ArticleActivity extends AppCompatActivity {
     @Override
     protected void onPostCreate(@Nullable Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-        setupSeachListener(linearLayoutManager);
+        setupSeachListener();
     }
 
     private void setup() {
@@ -97,10 +99,14 @@ public class ArticleActivity extends AppCompatActivity {
         initArticles();
     }
 
-    private void setupSeachListener(LinearLayoutManager linearLayoutManager) {
+    private void setupSeachListener() {
         searchEditText.addTextChangedListener(new OnTextChanged() {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchPage = 0;
+
+                if (StringUtils.isEmpty(s)) return;
+
                 articleManager.cancelOperations();
                 articleManager.searchArticles(s, searchPage++, new PopulateArticlesListener() {
                     @Override
@@ -152,6 +158,11 @@ public class ArticleActivity extends AppCompatActivity {
                         new ArticleAdapter(ArticleActivity.this, articleClickListener, items, emptyView),
                         firstVisibleItemPosition);
             }
+
+            @Override
+            protected boolean isLoading() {
+                return isLoading;
+            }
         };
     }
 
@@ -168,6 +179,11 @@ public class ArticleActivity extends AppCompatActivity {
                                 firstVisibleItemPosition);
                     }
                 });
+            }
+
+            @Override
+            protected boolean isLoading() {
+                return isLoading;
             }
         };
     }
@@ -226,6 +242,7 @@ public class ArticleActivity extends AppCompatActivity {
         @Override
         public void onPreExecute() {
             progressBar.setVisibility(View.VISIBLE);
+            isLoading = true;
         }
 
         @Override
@@ -258,6 +275,7 @@ public class ArticleActivity extends AppCompatActivity {
         @Override
         public void onPostExecute() {
             progressBar.setVisibility(View.GONE);
+            isLoading = false;
         }
     }
 }
