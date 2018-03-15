@@ -2,7 +2,9 @@ package br.org.venturus.newyorktimesreader.business;
 
 import br.org.venturus.newyorktimesreader.business.mapper.ArticlesMapper;
 import br.org.venturus.newyorktimesreader.business.validator.ArticleValidator;
+import br.org.venturus.newyorktimesreader.entity.enm.ArticleSection;
 import br.org.venturus.newyorktimesreader.entity.response.MostViewedResponses;
+import br.org.venturus.newyorktimesreader.entity.response.SearchArticlesResponses;
 import br.org.venturus.newyorktimesreader.entity.to.ArticlesTo;
 import br.org.venturus.newyorktimesreader.infra.OperationResult;
 import br.org.venturus.newyorktimesreader.infra.factory.ApiErrorFactory;
@@ -15,9 +17,6 @@ public class ArticleBusiness {
 
     private static final String DEFAULT_PERIOD = "7";
 
-    //TODO: article repository, offline first
-    //TODO: handle no connection
-
     private NYTApi nytApi;
     private ArticleValidator articleValidator;
 
@@ -27,7 +26,7 @@ public class ArticleBusiness {
     }
 
     public OperationResult<ArticlesTo> loadMostViewed(ArticleSection section) {
-        Timber.i("[BEGIN] loadMostViewed");
+        Timber.i("[BEGIN] loadMostViewed - %s", section);
 
         OperationResult<ArticlesTo> result = new OperationResult<>();
 
@@ -50,37 +49,36 @@ public class ArticleBusiness {
             result.setError(error);
         }
 
-        Timber.i("[END] loadMostViewed");
+        Timber.i("[END] loadMostViewed - %s", result);
         return result;
     }
 
-    //TODO move it
-    //TODO URL builder
-    //TODO StrinfDef ?
-    public enum ArticleSection {
-        BUSINESS("business"),
-        SCIENCE("science"),
-        TECHNOLOGY("technology");
+    public OperationResult<ArticlesTo> searchArticles(CharSequence query, int page) {
+        Timber.i("[BEGIN] searchArticles - %s %s", query, page);
 
-        private String value;
+        OperationResult<ArticlesTo> result = new OperationResult<>();
 
-        ArticleSection(String value) {
-            this.value = value;
+        result.setValidationCodes(articleValidator.validateSearchArticles(query, page));
+        if (!result.getValidationCodes().isEmpty()) {
+            result.setError(ApiErrorFactory.createValidationError());
+
+            Timber.i("[END] searchArticles - %s", result);
+            return result;
         }
 
-        public String getValue() {
-            return value;
+        ApiResponse<SearchArticlesResponses> response = nytApi.searchArticles(String.valueOf(query), String.valueOf(page));
+
+        if (response.isSuccessful()) {
+            result.setResult(ArticlesMapper.toArticlesTo(response.getResult()));
+        } else {
+            ApiError error = response.getError();
+            Timber.e(error.toString());
+
+            result.setError(error);
         }
 
-        public static ArticleSection getByValue(String value) {
-            ArticleSection articleSection = null;
-            for (ArticleSection articleSectionItem : ArticleSection.class.getEnumConstants()) {
-                if (articleSectionItem.getValue().equals(value)) {
-                    articleSection = articleSectionItem;
-                    break;
-                }
-            }
-            return articleSection;
-        }
+        Timber.i("[END] searchArticles - %s", result);
+        return result;
     }
+
 }

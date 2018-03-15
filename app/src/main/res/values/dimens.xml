@@ -14,5 +14,6 @@
 
     <dimen name="cardRadius">2dp</dimen>
     <dimen name="cardElevation">8dp</dimen>
+    <dimen name="searchBarPadding">24dp</dimen>
 
 </resources>

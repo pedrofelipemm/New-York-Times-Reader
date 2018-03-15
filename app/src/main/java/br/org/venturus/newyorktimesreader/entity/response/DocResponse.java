@@ -2,22 +2,22 @@ package br.org.venturus.newyorktimesreader.entity.response;
 
 import com.google.gson.annotations.SerializedName;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class MostViewedResponse {
+public class DocResponse {
 
+    private HeadlineResponse headline = new HeadlineResponse();
+
+    @SerializedName("web_url")
     private String url;
 
-    private String title;
-
-    @SerializedName("published_date")
+    @SerializedName("pub_date")
     private String publishedDate;
 
-    @SerializedName("abstract")
     private String snippet;
 
-    private List<MediaResponse> media = new ArrayList<>();
+    @SerializedName("multimedia")
+    private List<MultimediaResponse> multimedias;
 
     @SuppressWarnings({"unused", "WeakerAccess"})
     public String getUrl() {
@@ -25,8 +25,8 @@ public class MostViewedResponse {
     }
 
     @SuppressWarnings({"unused", "WeakerAccess"})
-    public String getTitle() {
-        return title;
+    public HeadlineResponse getHeadline() {
+        return headline;
     }
 
     @SuppressWarnings({"unused", "WeakerAccess"})
@@ -40,18 +40,18 @@ public class MostViewedResponse {
     }
 
     @SuppressWarnings({"unused", "WeakerAccess"})
-    public List<MediaResponse> getMedia() {
-        return new ArrayList<>(media);
+    public List<MultimediaResponse> getMultimedias() {
+        return multimedias;
     }
 
     @Override
     public String toString() {
-        return MostViewedResponse.class.getSimpleName() + "{" +
-                "url='" + url + '\'' +
-                ", title='" + title + '\'' +
+        return DocResponse.class.getSimpleName() + "{" +
+                "headline=" + headline +
+                ", url='" + url + '\'' +
                 ", publishedDate='" + publishedDate + '\'' +
                 ", snippet='" + snippet + '\'' +
-                ", media=" + media +
+                ", multimedias=" + multimedias +
                 '}';
     }
 }

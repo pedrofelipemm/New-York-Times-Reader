@@ -7,4 +7,8 @@
 
     <string name="parametro_nao_informado">Parâmetro <xliff:g id="param">%s</xliff:g> não informado</string>
     <string name="erro_desconhecido">Erro desconhecido, por favor, tente novamente mais tarde.</string>
+    <string name="buscar">Buscar</string>
+    <string name="data_desconhecida">Data desconhecida</string>
+
+    <string name="unable_to_handle_actionview">Unable to handle ACTION_VIEW, URL: <xliff:g id="url">%s</xliff:g></string>
 </resources>

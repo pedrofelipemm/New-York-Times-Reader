@@ -19,8 +19,6 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class NetworkFactory {
 
-    //TODO do not commit api key, should be in gradle.properties
-
     private static final int DEFAULT_TIMEOUT = 180;
 
     private NetworkFactory(){}
@@ -53,7 +51,7 @@ public class NetworkFactory {
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
 
         switch (BuildConfig.ENVIRONMENT) {
-            case Environment.DEVELOPMENT: return loggingInterceptor.setLevel(Level.BODY);
+            case Environment.DEVELOPMENT: return loggingInterceptor.setLevel(Level.NONE);
             default: return loggingInterceptor.setLevel(Level.NONE);
         }
     }

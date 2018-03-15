@@ -2,6 +2,8 @@ package br.org.venturus.newyorktimesreader.entity.response;
 
 public class MediaMetadata {
 
+    public static final String DEFAULT_FORMAT = "Standard Thumbnail";
+
     private String format;
     private String url;
 

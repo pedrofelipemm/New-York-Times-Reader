@@ -4,10 +4,13 @@ import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
 
+import br.org.venturus.newyorktimesreader.entity.response.DocResponse;
 import br.org.venturus.newyorktimesreader.entity.response.MediaMetadata;
 import br.org.venturus.newyorktimesreader.entity.response.MediaResponse;
 import br.org.venturus.newyorktimesreader.entity.response.MostViewedResponse;
 import br.org.venturus.newyorktimesreader.entity.response.MostViewedResponses;
+import br.org.venturus.newyorktimesreader.entity.response.MultimediaResponse;
+import br.org.venturus.newyorktimesreader.entity.response.SearchArticlesResponses;
 import br.org.venturus.newyorktimesreader.entity.to.ArticleTo;
 import br.org.venturus.newyorktimesreader.entity.to.ArticlesTo;
 import br.org.venturus.newyorktimesreader.infra.utils.DateUtils;
@@ -15,45 +18,33 @@ import timber.log.Timber;
 
 public class ArticlesMapper {
 
-    //TODO parametrizar qual url buscar
+    public static ArticlesTo toArticlesTo(SearchArticlesResponses response) {
+        ArticlesTo articles = new ArticlesTo();
 
-    private static final String DEFAULT_MOST_VIEWED_URL_FORMAT = "Standard Thumbnail";
+        List<DocResponse> docs = response.getResponse().getDocs();
+        for (DocResponse doc : docs) {
 
-    //TODO delete? private static final String DEFAULT_URL_FORMAT = "thumbLarge";
-//    public static ArticlesTo toArticlesTo(MostViewedResponses response) {
-//        ArticlesTo articles = new ArticlesTo();
-//
-//        if (response.getResults() == null) {
-//            return articles;
-//        }
-//
-//        for (MostViewedResponse story : response.getResults()) {
-//
-//            Date publishDate = null;
-//            try {
-//                publishDate = DateUtils.parse(story.getPublishedDate());
-//            } catch (ParseException e) {
-//                Timber.e(e);
-//            }
-//
-//            articles.addArticle(new ArticleTo(
-//                    story.getTitle(),
-//                    publishDate,
-//                    story.getSnippet(),
-//                    extractDefaultUrl(story.getMultimedia())
-//            ));
-//        }
-//
-//
-//        return articles;
-//    }
+            Date publishDate = null;
+            try {
+                publishDate = DateUtils.parse(doc.getPublishedDate());
+            } catch (ParseException e) {
+                Timber.e(e);
+            }
+
+            articles.addArticle(new ArticleTo(
+                    doc.getUrl(),
+                    doc.getHeadline().getTitle(),
+                    publishDate,
+                    doc.getSnippet(),
+                    extractDefaultSearchUrl(doc.getMultimedias())
+            ));
+        }
+
+        return articles;
+    }
 
     public static ArticlesTo toArticlesTo(MostViewedResponses response) {
         ArticlesTo articles = new ArticlesTo();
-
-        if (response.getResults() == null) {
-            return articles;
-        }
 
         for (MostViewedResponse item : response.getResults()) {
 
@@ -65,10 +56,11 @@ public class ArticlesMapper {
             }
 
             articles.addArticle(new ArticleTo(
+                    item.getUrl(),
                     item.getTitle(),
                     publishDate,
                     item.getSnippet(),
-                    extractDefaultMostViewedUrl(item.getMultimedia())
+                    extractDefaultMostViewedUrl(item.getMedia())
             ));
         }
 
@@ -76,13 +68,12 @@ public class ArticlesMapper {
         return articles;
     }
 
-    //TODO suportar outras orientações e tamanhos de tela
     private static String extractDefaultMostViewedUrl(List<MediaResponse> mediaResponses) {
         String url = "";
 
         for (MediaResponse media : mediaResponses) {
             for (MediaMetadata data : media.getMediaMetadata()) {
-                if (DEFAULT_MOST_VIEWED_URL_FORMAT.equals(data.getFormat())) {
+                if (MediaMetadata.DEFAULT_FORMAT.equals(data.getFormat())) {
                     url = data.getUrl();
                     break;
                 }
@@ -92,4 +83,16 @@ public class ArticlesMapper {
         return url;
     }
 
+    private static String extractDefaultSearchUrl(List<MultimediaResponse> multimedias) {
+        String url = "";
+
+        for (MultimediaResponse multimedia : multimedias) {
+            if (MultimediaResponse.DEFAULT_SUBTYPE.equals(multimedia.getSubtype())) {
+                url = multimedia.getUrl();
+                break;
+            }
+        }
+
+        return url;
+    }
 }

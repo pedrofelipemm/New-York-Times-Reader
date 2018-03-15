@@ -10,11 +10,14 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.request.RequestOptions;
+
 import br.org.venturus.newyorktimesreader.R;
 import br.org.venturus.newyorktimesreader.entity.to.ArticleTo;
 import br.org.venturus.newyorktimesreader.entity.to.ArticlesTo;
 import br.org.venturus.newyorktimesreader.infra.GlideApp;
 import br.org.venturus.newyorktimesreader.infra.utils.DateUtils;
+import br.org.venturus.newyorktimesreader.infra.utils.StringUtils;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
@@ -76,14 +79,15 @@ class ArticleAdapter extends RecyclerView.Adapter<ArticleAdapter.ViewHolder> {
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         ArticleTo article = articles.get(position);
 
+        String date = DateUtils.format(article.getPublishDate());
+
         holder.titleTextView.setText(article.getTitle());
-        holder.publishDateTextView.setText(DateUtils.format(article.getPublishDate()));
+        holder.publishDateTextView.setText(StringUtils.isEmpty(date) ? context.getString(R.string.data_desconhecida) : date);
         holder.snippetTextView.setText(article.getSnippet());
 
         GlideApp.with(context)
                 .load(TextUtils.isEmpty(article.getPictureUrl()) ? INVALID_IMAGE : article.getPictureUrl())
-                //TODO placeholder
-                //.apply(new RequestOptions().error(R.drawable.no_image))
+                .apply(new RequestOptions().error(R.drawable.no_image))
                 .into(holder.articlePictureImageView);
 
         holder.root.setOnClickListener(v -> itemClickListener.onItemClick(article, v));

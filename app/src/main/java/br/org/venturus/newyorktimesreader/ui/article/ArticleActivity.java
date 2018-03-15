@@ -1,44 +1,38 @@
 package br.org.venturus.newyorktimesreader.ui.article;
 
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.RecyclerView.OnScrollListener;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import java.util.List;
 
 import br.org.venturus.newyorktimesreader.R;
-import br.org.venturus.newyorktimesreader.business.ArticleBusiness.ArticleSection;
 import br.org.venturus.newyorktimesreader.business.validator.ArticleValidator;
+import br.org.venturus.newyorktimesreader.entity.enm.ArticleSection;
 import br.org.venturus.newyorktimesreader.entity.to.ArticleTo;
 import br.org.venturus.newyorktimesreader.entity.to.ArticlesTo;
 import br.org.venturus.newyorktimesreader.infra.OperationListener;
 import br.org.venturus.newyorktimesreader.infra.factory.ManagerFactory;
 import br.org.venturus.newyorktimesreader.infra.network.ApiError;
-import br.org.venturus.newyorktimesreader.infra.utils.DateUtils;
 import br.org.venturus.newyorktimesreader.manager.ArticleManager;
-import br.org.venturus.newyorktimesreader.ui.OnDisplayFeedback;
 import br.org.venturus.newyorktimesreader.ui.EndlessScrollListener;
+import br.org.venturus.newyorktimesreader.ui.OnDisplayFeedback;
+import br.org.venturus.newyorktimesreader.ui.OnTextChanged;
+import br.org.venturus.newyorktimesreader.ui.ViewUtils;
 import br.org.venturus.newyorktimesreader.ui.article.ArticleAdapter.ArticleClickListener;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import timber.log.Timber;
 
 public class ArticleActivity extends AppCompatActivity {
-
-    //TODO: polir UI
-        // Exibir erro de maneira amigável
-        // Utilizar Coordinator layout para esconder barra de busca
-    //TODO: preference, choose most viewed section
-    //TODO: ViewModel para não fazer chamada de rede quando houver mudanças de configurações.
-    //TODO: mudar layout caso nao tenha imagem
-    //TODO: Extrair styles comuns
-    //TODO Test unitário / Android test
 
     @BindView(R.id.toolbar)
     Toolbar toolbar;
@@ -52,18 +46,22 @@ public class ArticleActivity extends AppCompatActivity {
     @BindView(R.id.recycler_view)
     RecyclerView recyclerView;
 
+    @BindView(R.id.search_edittext)
+    EditText searchEditText;
+
     private ArticlesTo articles;
+
+    private LinearLayoutManager linearLayoutManager;
 
     int numberOfItemsToLoad ;
     private int recyclerViewPage;
+    private int searchPage;
 
     private ArticleManager articleManager;
 
     private ArticleClickListener articleClickListener =
-            (article, v) -> Toast.makeText(ArticleActivity.this,
-                    DateUtils.format(article.getPublishDate()),
-                    Toast.LENGTH_SHORT)
-                    .show();
+            (article, v) -> ViewUtils.launchChromeCustomTab(ArticleActivity.this, article.getUrl());
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +74,12 @@ public class ArticleActivity extends AppCompatActivity {
         initViews();
     }
 
+    @Override
+    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        setupSeachListener(linearLayoutManager);
+    }
+
     private void setup() {
         articleManager = ManagerFactory.createArticleManager();
 
@@ -83,21 +87,36 @@ public class ArticleActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        ViewUtils.hideKeyboard(getWindow());
         setSupportActionBar(toolbar);
 
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(ArticleActivity.this);
+        linearLayoutManager = new LinearLayoutManager(ArticleActivity.this);
 
         recyclerView.setLayoutManager(linearLayoutManager);
-        recyclerView.setAdapter(new ArticleAdapter(ArticleActivity.this, articleClickListener, new ArticlesTo(), emptyView));
 
-        String section = getString(R.string.default_most_viewed_section);
-        articleManager.loadMostViewed(ArticleSection.getByValue(section), new OperationListener<ArticlesTo>() {
+        initArticles();
+    }
 
+    private void setupSeachListener(LinearLayoutManager linearLayoutManager) {
+        searchEditText.addTextChangedListener(new OnTextChanged() {
             @Override
-            public void onPreExecute() {
-                progressBar.setVisibility(View.VISIBLE);
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                articleManager.cancelOperations();
+                articleManager.searchArticles(s, searchPage++, new PopulateArticlesListener() {
+                    @Override
+                    public void onSuccess(ArticlesTo articles) {
+                        recyclerView.setAdapter(new ArticleAdapter(ArticleActivity.this, articleClickListener, articles, emptyView));
+                        recyclerView.clearOnScrollListeners();
+                        recyclerView.addOnScrollListener(createSearchScroll(s));
+                    }
+                });
             }
+        });
+    }
 
+    private void initArticles() {
+        String section = getString(R.string.default_most_viewed_section);
+        articleManager.loadMostViewed(ArticleSection.getByValue(section), new PopulateArticlesListener() {
             @Override
             public void onSuccess(ArticlesTo articles) {
                 ArticleActivity.this.articles = articles;
@@ -105,43 +124,14 @@ public class ArticleActivity extends AppCompatActivity {
                 ArticlesTo items = new ArticlesTo();
                 items.addAll(articles.subList(recyclerViewPage, numberOfItemsToLoad));
 
-                recyclerView.setLayoutManager(linearLayoutManager);
                 recyclerView.setAdapter(new ArticleAdapter(ArticleActivity.this, articleClickListener, items, emptyView));
-                recyclerView.addOnScrollListener(mostViewedScroll(linearLayoutManager));
-            }
-
-            @Override
-            public void onValidation(List<String> codes) {
-                Timber.e(codes.toString());
-                for (String code : codes) {
-                    switch (code) {
-                        case ArticleValidator.SECTION_VAZIO:
-                            Toast.makeText(ArticleActivity.this, getString(R.string.parametro_nao_informado, "section"),
-                                    Toast.LENGTH_SHORT).show();
-                            break;
-                        default:
-                            Toast.makeText(ArticleActivity.this, getString(R.string.erro_desconhecido),
-                                    Toast.LENGTH_SHORT).show();
-                    }
-                }
-
-            }
-
-            @Override
-            public void onError(ApiError error) {
-                Timber.e(error.toString());
-                Toast.makeText(ArticleActivity.this, getString(R.string.erro_desconhecido),
-                        Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onPostExecute() {
-                progressBar.setVisibility(View.GONE);
+                recyclerView.clearOnScrollListeners();
+                recyclerView.addOnScrollListener(createMostViewedScroll());
             }
         });
     }
 
-    private OnScrollListener mostViewedScroll(LinearLayoutManager linearLayoutManager) {
+    private OnScrollListener createMostViewedScroll() {
         return new EndlessScrollListener(numberOfItemsToLoad, linearLayoutManager) {
             @Override
             public void onScrolledToEnd(int firstVisibleItemPosition) {
@@ -157,7 +147,7 @@ public class ArticleActivity extends AppCompatActivity {
                     end = articles.size();
                 }
 
-                ArticlesTo items = getItemsToLoad(start, end);
+                ArticlesTo items = getItemsToLoad(articles, start, end);
                 refreshView(recyclerView,
                         new ArticleAdapter(ArticleActivity.this, articleClickListener, items, emptyView),
                         firstVisibleItemPosition);
@@ -165,8 +155,24 @@ public class ArticleActivity extends AppCompatActivity {
         };
     }
 
-    private ArticlesTo getItemsToLoad(int start, int end) {
+    private OnScrollListener createSearchScroll(CharSequence search) {
+        return new EndlessScrollListener(numberOfItemsToLoad, linearLayoutManager) {
+            @Override
+            public void onScrolledToEnd(int firstVisibleItemPosition) {
+                articleManager.searchArticles(search, searchPage++, new PopulateArticlesListener() {
+                    @Override
+                    public void onSuccess(ArticlesTo articles) {
+                        ArticlesTo items = getItemsToLoad(articles);
+                        refreshView(recyclerView,
+                                new ArticleAdapter(ArticleActivity.this, articleClickListener, items, emptyView),
+                                firstVisibleItemPosition);
+                    }
+                });
+            }
+        };
+    }
 
+    private ArticlesTo getItemsToLoad(ArticlesTo articles, int start, int end) {
         displayFeedback();
 
         ArticlesTo result = new ArticlesTo();
@@ -175,6 +181,22 @@ public class ArticleActivity extends AppCompatActivity {
 
         result.addAll(oldArticles.getArticles());
         result.addAll(newArticles);
+
+        return result;
+    }
+
+    private ArticlesTo getItemsToLoad(ArticlesTo articles) {
+        displayFeedback();
+        ArticlesTo result = new ArticlesTo();
+
+        if (articles == null) {
+            return  result;
+        }
+
+        ArticlesTo oldArticles = ((ArticleAdapter) recyclerView.getAdapter()).getArticles();
+
+        result.addAll(oldArticles.getArticles());
+        result.addAll(articles.getArticles());
 
         return result;
     }
@@ -197,5 +219,45 @@ public class ArticleActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
             }
         }).execute();
+    }
+
+    private abstract class PopulateArticlesListener extends OperationListener<ArticlesTo> {
+
+        @Override
+        public void onPreExecute() {
+            progressBar.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        public abstract void onSuccess(ArticlesTo articles);
+
+        @Override
+        public void onValidation(List<String> codes) {
+            Timber.e(codes.toString());
+            for (String code : codes) {
+                switch (code) {
+                    case ArticleValidator.SECTION_VAZIO:
+                        Toast.makeText(ArticleActivity.this, getString(R.string.parametro_nao_informado, "section"),
+                                Toast.LENGTH_SHORT).show();
+                        break;
+                    default:
+                        Toast.makeText(ArticleActivity.this, getString(R.string.erro_desconhecido),
+                                Toast.LENGTH_SHORT).show();
+                }
+            }
+
+        }
+
+        @Override
+        public void onError(ApiError error) {
+            Timber.e(error.toString());
+            Toast.makeText(ArticleActivity.this, getString(R.string.erro_desconhecido),
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void onPostExecute() {
+            progressBar.setVisibility(View.GONE);
+        }
     }
 }
