@@ -1,0 +1,10 @@
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name">New York Times Reader</string>
+
+    <string name="default_most_viewed_section">technology</string>
+    <string name="algo_deu_errado">Algo deu errado :(</string>
+    <string name="imagem_do_artigo">Imagem do artigo</string>
+
+    <string name="parametro_nao_informado">Parâmetro <xliff:g id="param">%s</xliff:g> não informado</string>
+    <string name="erro_desconhecido">Erro desconhecido, por favor, tente novamente mais tarde.</string>
+</resources>
